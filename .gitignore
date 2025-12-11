@@ -33,6 +33,7 @@
 *.lib
 
 # Executables
+labs/lab2/build
 *.exe
 *.out
 *.app
