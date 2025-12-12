@@ -127,19 +127,17 @@ struct BigInt {
     friend bool operator==(const BigInt& a, const BigInt& b) { return compare(a, b) == 0; }
     friend bool operator!=(const BigInt& a, const BigInt& b) { return compare(a, b) != 0; }
 
-    friend BigInt operator+(BigInt& a, const BigInt& b) {
+    BigInt& operator+=(const BigInt& other) { return add(other); }
+    friend BigInt operator+(BigInt a, const BigInt& b) { a += b; return a; }
+    friend BigInt operator-(BigInt a, const BigInt& b) {
         return a;
     }
 
-    friend BigInt operator-(BigInt& a, const BigInt& b) {
+    friend BigInt operator*(BigInt a, const BigInt& b) {
         return a;
     }
 
-    friend BigInt operator*(BigInt& a, const BigInt& b) {
-        return a;
-    }
-
-    friend BigInt operator/(BigInt& a, const BigInt& b) {
+    friend BigInt operator/(BigInt a, const BigInt& b) {
         return a;
     }
 
