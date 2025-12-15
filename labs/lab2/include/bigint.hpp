@@ -120,6 +120,67 @@ struct BigInt {
         return *this;
     }
 
+    BigInt& substract(const BigInt& other) {
+        const size_t lenOfThis = limb.size();
+        const size_t lenOfOthr = other.limb.size();
+
+        if (*this < other) throw std::runtime_error("BigInt::substract: result is negative");
+        
+        uint64_t borrow = 0;
+        for (size_t i = 0; i < lenOfThis; ++i) {
+            const uint64_t minuend = limb[i];
+            const uint64_t substrahend = (i < lenOfOthr) ? other.limb[i] : 0ULL;
+            __int128_t diff =
+                static_cast<__int128_t>(minuend) -
+                static_cast<__int128_t>(substrahend) -
+                static_cast<__int128_t>(borrow);
+
+            if (diff < 0) {
+                borrow = 1;
+                diff += (static_cast<__int128_t>(1) << 64);
+            } else {
+                borrow = 0;
+            }
+            
+            limb[i] = static_cast<uint64_t>(diff);
+        }
+
+        normalize();
+        return *this;
+    }
+
+    BigInt& mult(const BigInt& other) {
+        if (isZero() || other.isZero()) {
+            limb.clear();
+            return *this;
+        }
+
+        const size_t lenoft = limb.size();
+        const size_t lenofoth = other.limb.size();
+        std::vector<uint64_t> res(lenoft + lenofoth, 0);
+
+        for (size_t i = 0; i < lenoft; ++i) {
+            __uint128_t carry = 0;
+            for (size_t j = 0; j < lenofoth; ++j) {
+                const uint64_t otherElem = other.limb[j];
+                const __uint128_t sum =
+                    static_cast<__uint128_t>(limb[i]) *
+                    static_cast<__uint128_t>(otherElem) +
+                    static_cast<__uint128_t>(res[i + j]) +
+                    carry;
+                res[i + j] = static_cast<uint64_t>(sum);
+                carry = (sum >> 64);
+            }
+            if (carry != 0) {
+                res[i + lenofoth] += static_cast<uint64_t>(carry);
+            }
+        }
+
+        limb.swap(res);
+        normalize();
+        return *this;
+    }
+
     friend bool operator>(const BigInt& a, const BigInt& b) { return compare(a, b) == 1; }
     friend bool operator>=(const BigInt& a, const BigInt& b) { return compare(a, b) != -1; }
     friend bool operator<(const BigInt& a, const BigInt& b) { return compare(a, b) == -1; }
@@ -129,13 +190,12 @@ struct BigInt {
 
     BigInt& operator+=(const BigInt& other) { return add(other); }
     friend BigInt operator+(BigInt a, const BigInt& b) { a += b; return a; }
-    friend BigInt operator-(BigInt a, const BigInt& b) {
-        return a;
-    }
 
-    friend BigInt operator*(BigInt a, const BigInt& b) {
-        return a;
-    }
+    BigInt& operator-=(const BigInt& other) { return substract(other); }
+    friend BigInt operator-(BigInt a, const BigInt& b) { a -= b; return a; }
+
+    BigInt& operator*=(const BigInt& other) { return mult(other); }
+    friend BigInt operator*(BigInt a, const BigInt& b) { a *= b; return a; }
 
     friend BigInt operator/(BigInt a, const BigInt& b) {
         return a;

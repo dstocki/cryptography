@@ -211,3 +211,185 @@ TEST_CASE("BigInt addition") {
         CHECK_EQ(c.toHex(), res);
     }
 }
+
+TEST_CASE("BigInt substraction") {
+    {
+        /*
+         * Check that we catch an exception when minuend is smaller than substrahend
+        */
+        std::string s1 = "";
+        s1.append("0000EFFF");
+        s1.append("00000000");
+        s1.append("00000000");
+        s1.append("00000000");
+        s1.append("00000000");
+
+        std::string s2 = "";
+        s2.append("0000FFFF");
+        s2.append("00000000");
+        s2.append("00000000");
+        s2.append("00000000");
+        s2.append("00000000");
+
+        BigInt a = BigInt::fromHex(s1);
+        BigInt b = BigInt::fromHex(s2);
+
+        CHECK_THROWS_WITH_MESSAGE(a -= b, "BigInt::substract: result is negative", "std::runtime_error");
+    }
+
+    {
+        /*
+         * Check that borrow mechanism works correctly through a long consecutive action
+        */
+        std::string s1 = "";
+        s1.append("F0000000");
+        s1.append("00000000");
+        s1.append("00000000");
+        s1.append("00000000");
+        s1.append("00000000");
+        s1.append("00000000");
+        s1.append("00000000");
+
+        std::string s2 = "";
+        s2.append("00000000");
+        s2.append("00000000");
+        s2.append("00000000");
+        s2.append("00000000");
+        s2.append("00000000");
+        s2.append("00000000");
+        s2.append("00000001");
+
+        BigInt a = BigInt::fromHex(s1);
+        BigInt b = BigInt::fromHex(s2);
+
+        a -= b;
+
+        std::string res = "";
+        res.append("EFFFFFFF");
+        res.append("FFFFFFFF");
+        res.append("FFFFFFFF");
+        res.append("FFFFFFFF");
+        res.append("FFFFFFFF");
+        res.append("FFFFFFFF");
+        res.append("FFFFFFFF");
+
+        CHECK(!a.isZero());
+        CHECK_EQ(a.limb.size(), 4);
+        CHECK_EQ(a.toHex(), res);
+    }
+
+    {
+        /*
+         * Check that more complicated example works correctly
+        */
+        std::string s1 = "";
+        s1.append("FEFEFEFE");
+        s1.append("FEFEFEFE");
+        s1.append("FEFEFEFE");
+
+        std::string s2 = "";
+        s2.append("EFEFEFEF");
+        s2.append("EFEFEFEF");
+        s2.append("EFEFEFEF");
+
+        BigInt a = BigInt::fromHex(s1);
+        BigInt b = BigInt::fromHex(s2);
+
+        a -= b;
+
+        std::string res = "";
+        res.append("F0F0F0F");
+        res.append("0F0F0F0F");
+        res.append("0F0F0F0F");
+
+        CHECK(!a.isZero());
+        CHECK_EQ(a.limb.size(), 2);
+        CHECK_EQ(a.toHex(), res);
+    }
+
+    {
+        /*
+         * Check that a long consecutive action of normalization works correctly
+        */
+        std::string s1 = "";
+        s1.append("FFFFFFFF");
+        s1.append("FFFFFFFF");
+        s1.append("FFFFFFFF");
+        s1.append("FFFFFFFF");
+
+        BigInt a = BigInt::fromHex(s1);
+        BigInt b = BigInt::fromHex(s1);
+
+        a -= b;
+
+        CHECK(a.isZero());
+        CHECK_EQ(a.toHex(), "0");
+    }
+}
+
+TEST_CASE("BigInt multiplication") {
+    {
+        /*
+         * Simple multiplication that is easy to predict
+         *
+         * s = 0x3F * (2^64 + 2^32 + 1) [t = 2^32]
+         * s = 63 * (t^2 + t + 1)
+         * res = s^2 = 3969 * (t^2 + t + 1)^2
+         * res = 0xF81 * (t^4 + 2t^3 + 3t^2 + 2t + 1)
+         * 
+         * This means that res has:
+         *  1) 0xF81 on bit 1
+         *  2) 0xF81 * 0x2 = 0x1F02 on bit 32
+         *  3) 0xF81 * 0x3 = 0x2E83 on bit 64
+         *  4) 0xF81 * 0x2 = 0x1F02 on bit 96
+         *  5) 0xF81 on bit 256
+        */
+        std::string s = ""; // 0xF81 * (2^64 + 2^32 + 1)
+        s.append("0000003F");
+        s.append("0000003F");
+        s.append("0000003F");
+
+        BigInt a = BigInt::fromHex(s);
+        BigInt b = BigInt::fromHex(s);
+        a *= b;
+
+        std::string res = "";
+        res.append("F81");
+        res.append("00001F02");
+        res.append("00002E83");
+        res.append("00001F02");
+        res.append("00000F81");
+
+        CHECK(!a.isZero());
+        CHECK(!b.isZero());
+        CHECK_EQ(a.limb.size(), 3);
+        CHECK_EQ(a.toHex(), res);
+    }
+
+    {
+        /*
+         * Check that new limb is created when result does not fit in the same size
+         *
+         * s = 0xF * 2^59
+         * s^2 = 0xF * 0xF * 2^118 = 0xE1 * 2^118
+        */
+       std::string s = "";
+       s.append("F0000000");
+       s.append("00000000");
+
+       BigInt a = BigInt::fromHex(s);
+       BigInt b = BigInt::fromHex(s);
+
+       a *= b;
+
+       std::string res = "";
+       res.append("E1000000");
+       res.append("00000000");
+       res.append("00000000");
+       res.append("00000000");
+
+       CHECK(!a.isZero());
+       CHECK_EQ(a.limb.size(), 2);
+       CHECK_EQ(a.toHex(), res);
+    }
+}
