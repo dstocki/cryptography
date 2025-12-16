@@ -40,13 +40,13 @@
     +-----------------------------------------------------------------------------------+
 
 */
-struct BigInt {
+struct BigUnsigned {
     std::vector<uint64_t> limb;
 
-    BigInt() = default;
+    BigUnsigned() = default;
 
     /* Designed for shadowing simple uint64_t */
-    BigInt(const uint64_t v) {
+    BigUnsigned(const uint64_t v) {
         if (v != 0) limb.push_back(v);
     }
 
@@ -66,7 +66,7 @@ struct BigInt {
      * a < b => return -1
      * a == b => return 0
     */
-    static int compare(const BigInt& a, const BigInt& b) {
+    static int compare(const BigUnsigned& a, const BigUnsigned& b) {
         const size_t loa = a.limb.size(); // Length of a
         const size_t lob = b.limb.size();
 
@@ -87,8 +87,8 @@ struct BigInt {
 
     /*
         +--------------------------------------------------+
-        | Let a_i be i-th limb of BigInt a                 |
-        | Let b_i be i-th limb of BigInt b                 |
+        | Let a_i be i-th limb of BigUnsigned a                 |
+        | Let b_i be i-th limb of BigUnsigned b                 |
         |                                                  |
         | this = a_0 a_1 ... a_m                           |
         | other = b_0 b_1 ... b_n                          |
@@ -101,7 +101,7 @@ struct BigInt {
         |    create a new limb in this with this carry     |
         +--------------------------------------------------+
     */
-    BigInt& add(const BigInt& other) {
+    BigUnsigned& add(const BigUnsigned& other) {
         const size_t lothis = limb.size();
         const size_t loothr = other.limb.size();
         const size_t lbase = std::max(lothis, loothr);
@@ -120,11 +120,11 @@ struct BigInt {
         return *this;
     }
 
-    BigInt& substract(const BigInt& other) {
+    BigUnsigned& substract(const BigUnsigned& other) {
         const size_t lenOfThis = limb.size();
         const size_t lenOfOthr = other.limb.size();
 
-        if (*this < other) throw std::runtime_error("BigInt::substract: result is negative");
+        if (*this < other) throw std::runtime_error("BigUnsigned::substract: result is negative");
         
         uint64_t borrow = 0;
         for (size_t i = 0; i < lenOfThis; ++i) {
@@ -149,7 +149,7 @@ struct BigInt {
         return *this;
     }
 
-    BigInt& mult(const BigInt& other) {
+    BigUnsigned& mult(const BigUnsigned& other) {
         if (isZero() || other.isZero()) {
             limb.clear();
             return *this;
@@ -181,23 +181,23 @@ struct BigInt {
         return *this;
     }
 
-    friend bool operator>(const BigInt& a, const BigInt& b) { return compare(a, b) == 1; }
-    friend bool operator>=(const BigInt& a, const BigInt& b) { return compare(a, b) != -1; }
-    friend bool operator<(const BigInt& a, const BigInt& b) { return compare(a, b) == -1; }
-    friend bool operator<=(const BigInt& a, const BigInt& b) { return compare(a, b) != 1; }
-    friend bool operator==(const BigInt& a, const BigInt& b) { return compare(a, b) == 0; }
-    friend bool operator!=(const BigInt& a, const BigInt& b) { return compare(a, b) != 0; }
+    friend bool operator>(const BigUnsigned& a, const BigUnsigned& b) { return compare(a, b) == 1; }
+    friend bool operator>=(const BigUnsigned& a, const BigUnsigned& b) { return compare(a, b) != -1; }
+    friend bool operator<(const BigUnsigned& a, const BigUnsigned& b) { return compare(a, b) == -1; }
+    friend bool operator<=(const BigUnsigned& a, const BigUnsigned& b) { return compare(a, b) != 1; }
+    friend bool operator==(const BigUnsigned& a, const BigUnsigned& b) { return compare(a, b) == 0; }
+    friend bool operator!=(const BigUnsigned& a, const BigUnsigned& b) { return compare(a, b) != 0; }
 
-    BigInt& operator+=(const BigInt& other) { return add(other); }
-    friend BigInt operator+(BigInt a, const BigInt& b) { a += b; return a; }
+    BigUnsigned& operator+=(const BigUnsigned& other) { return add(other); }
+    friend BigUnsigned operator+(BigUnsigned a, const BigUnsigned& b) { a += b; return a; }
 
-    BigInt& operator-=(const BigInt& other) { return substract(other); }
-    friend BigInt operator-(BigInt a, const BigInt& b) { a -= b; return a; }
+    BigUnsigned& operator-=(const BigUnsigned& other) { return substract(other); }
+    friend BigUnsigned operator-(BigUnsigned a, const BigUnsigned& b) { a -= b; return a; }
 
-    BigInt& operator*=(const BigInt& other) { return mult(other); }
-    friend BigInt operator*(BigInt a, const BigInt& b) { a *= b; return a; }
+    BigUnsigned& operator*=(const BigUnsigned& other) { return mult(other); }
+    friend BigUnsigned operator*(BigUnsigned a, const BigUnsigned& b) { a *= b; return a; }
 
-    friend BigInt operator/(BigInt a, const BigInt& b) {
+    friend BigUnsigned operator/(BigUnsigned a, const BigUnsigned& b) {
         return a;
     }
 
@@ -219,8 +219,8 @@ struct BigInt {
         | => limb[2] = (0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 1111 0111)_2 |
         +--------------------------------------------------------------------------------------------------+
     */
-    static BigInt fromHex(const std::string& s) {
-        BigInt res;
+    static BigUnsigned fromHex(const std::string& s) {
+        BigUnsigned res;
         res.limb.clear();
 
         auto ahxtoi = [](const char c) -> int {
@@ -241,7 +241,7 @@ struct BigInt {
                 const char c = s.at(--idx);
                 const int conv = ahxtoi(c);
 
-                if (conv < 0) return BigInt();
+                if (conv < 0) return BigUnsigned();
 
                 candidate |= (static_cast<uint64_t>(conv) << (nhexes * 4));
                 ++nhexes;

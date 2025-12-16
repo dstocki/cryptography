@@ -1,13 +1,13 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest/doctest.h"
-#include "bigint.hpp"
+#include "bigunsigned.hpp"
 
-TEST_CASE("BigInt constructors and isZero function") {
+TEST_CASE("BigUnsigned constructors and isZero function") {
     {
         /*
          * Check there are no limbs created when default constructor is used
         */
-        BigInt a;
+        BigUnsigned a;
         CHECK(a.isZero());
     }
 
@@ -15,7 +15,7 @@ TEST_CASE("BigInt constructors and isZero function") {
         /*
          * Check that 0 is treated as no-value in constructor, so no limbs are created
         */
-        BigInt a(0);
+        BigUnsigned a(0);
         CHECK(a.isZero());
     }
 
@@ -23,117 +23,117 @@ TEST_CASE("BigInt constructors and isZero function") {
         /*
          * Check that single U64 limb constructor works
         */
-        BigInt a(57); // 00111001
+        BigUnsigned a(57); // 00111001
         CHECK(a.toHex() == "39");
         CHECK_EQ(a.limb.size(), 1);
     }
 
     {
         /*
-            Check that U64 limb constructor cannot receive value higher than U64_max
-            and such attempt results in overflow
+         * Check that U64 limb constructor cannot receive value higher than U64_max
+         * and such attempt results in overflow
         */
-        BigInt a(UINT64_MAX + 1);
+        BigUnsigned a(UINT64_MAX + 1);
         CHECK_EQ(a.toHex(), "0");
     }
 }
 
-TEST_CASE("BigInt fromHex/toHex and normalization function") {
+TEST_CASE("BigUnsigned fromHex/toHex and normalization function") {
     {
         /*
          * Check that 0's hex string is treated as no limbs
         */
-       BigInt a = BigInt::fromHex("0000000000");
-       CHECK(a.isZero());
-       CHECK_EQ(a.toHex(), "0");
+        BigUnsigned a = BigUnsigned::fromHex("0000000000");
+        CHECK(a.isZero());
+        CHECK_EQ(a.toHex(), "0");
     }
 
     {
         /*
          * Check that normalization erases all 0's before a non-zero value
         */
-       BigInt a = BigInt::fromHex("0000123");
-       CHECK(!a.isZero());
-       CHECK_EQ(a.toHex(), "123");
-       CHECK_EQ(a.limb.size(), 1);
+        BigUnsigned a = BigUnsigned::fromHex("0000123");
+        CHECK(!a.isZero());
+        CHECK_EQ(a.toHex(), "123");
+        CHECK_EQ(a.limb.size(), 1);
     }
 
     {
         /*
-         * Check that non hex digit destroys constructor and returns empty BigInt
+         * Check that non hex digit destroys constructor and returns empty BigUnsigned
         */
-       BigInt a = BigInt::fromHex("11111G111");
-       CHECK(a.isZero());
-       CHECK_EQ(a.toHex(), "0");
+        BigUnsigned a = BigUnsigned::fromHex("11111G111");
+        CHECK(a.isZero());
+        CHECK_EQ(a.toHex(), "0");
     }
 
     {
         /*
          * Check that toHex removes leading zeros in MSL
         */
-       BigInt a = BigInt::fromHex("002001");
-       CHECK(!a.isZero());
-       CHECK_EQ(a.limb.size(), 1);
-       CHECK_EQ(a.toHex(), "2001");
+        BigUnsigned a = BigUnsigned::fromHex("002001");
+        CHECK(!a.isZero());
+        CHECK_EQ(a.limb.size(), 1);
+        CHECK_EQ(a.toHex(), "2001");
     }
 
     {
         /*
          * Check that normalization removes only 0's from limbs == 0
         */
-       std::string s = "";
-       s.append("00000000"); // 8 hexes (32 bits)
-       s.append("00000000"); // 8 hexes (32 bits)
-       s.append("00000000"); // 8 hexes (32 bits)
-       s.append("00000000"); // 8 hexes (32 bits)
-       s.append("1");
-       s.append("00000000"); // 8 hexes (32 bits)
-       s.append("00000000"); // 8 hexes (32 bits)
-       s.append("1");
-       s.append("00000000"); // 8 hexes (32 bits)
-       s.append("00000000"); // 8 hexes (32 bits)
-       s.append("1");
+        std::string s = "";
+        s.append("00000000"); // 8 hexes (32 bits)
+        s.append("00000000"); // 8 hexes (32 bits)
+        s.append("00000000"); // 8 hexes (32 bits)
+        s.append("00000000"); // 8 hexes (32 bits)
+        s.append("1");
+        s.append("00000000"); // 8 hexes (32 bits)
+        s.append("00000000"); // 8 hexes (32 bits)
+        s.append("1");
+        s.append("00000000"); // 8 hexes (32 bits)
+        s.append("00000000"); // 8 hexes (32 bits)
+        s.append("1");
 
-       BigInt a = BigInt::fromHex(s);
-       CHECK(!a.isZero());
-       CHECK_EQ(a.limb.size(), 3); // Without normalization would be 5
+        BigUnsigned a = BigUnsigned::fromHex(s);
+        CHECK(!a.isZero());
+        CHECK_EQ(a.limb.size(), 3); // Without normalization would be 5
 
-       std::string res = "";
-       res.append("100");
-       res.append("00000000");
-       res.append("00000010");
-       res.append("00000000");
-       res.append("00000001");
-       CHECK_EQ(a.toHex(), res);
+        std::string res = "";
+        res.append("100");
+        res.append("00000000");
+        res.append("00000010");
+        res.append("00000000");
+        res.append("00000001");
+        CHECK_EQ(a.toHex(), res);
     }
 
     {
         /*
-         * Check that 2 limbs of all 0's will result in no limbs in BigInt
+         * Check that 2 limbs of all 0's will result in no limbs in BigUnsigned
         */
-       std::string s = "";
-       s.append("00000000");
-       s.append("00000000");
-       s.append("00000000");
-       s.append("00000000");
-       s.append("00000000");
+        std::string s = "";
+        s.append("00000000");
+        s.append("00000000");
+        s.append("00000000");
+        s.append("00000000");
+        s.append("00000000");
 
-       BigInt a = BigInt::fromHex(s);
-       CHECK(a.isZero());
-       CHECK_EQ(a.toHex(), "0");
+        BigUnsigned a = BigUnsigned::fromHex(s);
+        CHECK(a.isZero());
+        CHECK_EQ(a.toHex(), "0");
     }
 }
 
-TEST_CASE("BigInt comparison operators") {
-    BigInt a = BigInt::fromHex("111");
-    BigInt b = BigInt::fromHex("1111");
-    BigInt c = BigInt::fromHex("11111");
-    BigInt d = BigInt::fromHex("1111F");
-    BigInt e = BigInt::fromHex("FFF");
-    BigInt f = BigInt::fromHex("111");
-    BigInt g = BigInt::fromHex("1111111111111111111111111111111111111111111111111"); // 49 nibbles
-    BigInt h = BigInt::fromHex("1111111111111111111111111111111111111111111111111");
-    BigInt i = BigInt::fromHex("2111111111111111111111111111111111111111111111111");
+TEST_CASE("BigUnsigned comparison operators") {
+    BigUnsigned a = BigUnsigned::fromHex("111");
+    BigUnsigned b = BigUnsigned::fromHex("1111");
+    BigUnsigned c = BigUnsigned::fromHex("11111");
+    BigUnsigned d = BigUnsigned::fromHex("1111F");
+    BigUnsigned e = BigUnsigned::fromHex("FFF");
+    BigUnsigned f = BigUnsigned::fromHex("111");
+    BigUnsigned g = BigUnsigned::fromHex("1111111111111111111111111111111111111111111111111"); // 49 nibbles
+    BigUnsigned h = BigUnsigned::fromHex("1111111111111111111111111111111111111111111111111");
+    BigUnsigned i = BigUnsigned::fromHex("2111111111111111111111111111111111111111111111111");
     
     CHECK_LT(a, b);
     CHECK_LT(c, d);
@@ -153,13 +153,13 @@ TEST_CASE("BigInt comparison operators") {
     CHECK_GT(i, h);
 }
 
-TEST_CASE("BigInt addition") {
+TEST_CASE("BigUnsigned addition") {
     {
         /*
          * Check if long consecutive carry is working
         */
-        BigInt a = BigInt::fromHex("FFFFFFFFFFFFFFFFF"); // 17 nibbles
-        BigInt b = BigInt::fromHex("FFFFFFFFFFFFFFFFF");
+        BigUnsigned a = BigUnsigned::fromHex("FFFFFFFFFFFFFFFFF"); // 17 nibbles
+        BigUnsigned b = BigUnsigned::fromHex("FFFFFFFFFFFFFFFFF");
         a += b;
 
         CHECK(!a.isZero());
@@ -171,8 +171,8 @@ TEST_CASE("BigInt addition") {
         /*
          * Check if carry returned from MSB in U64 creates a new limb
         */
-        BigInt a = BigInt::fromHex("8000000000000000"); // 16 nibbles
-        BigInt b = BigInt::fromHex("8000000000000000");
+        BigUnsigned a = BigUnsigned::fromHex("8000000000000000"); // 16 nibbles
+        BigUnsigned b = BigUnsigned::fromHex("8000000000000000");
         a += b;
 
         CHECK(!a.isZero());
@@ -193,9 +193,9 @@ TEST_CASE("BigInt addition") {
         s.append("00F00F00");
         s.append("00F00F00");
 
-        BigInt a = BigInt::fromHex(s);
-        BigInt b = BigInt::fromHex(s);
-        BigInt c = a + b;
+        BigUnsigned a = BigUnsigned::fromHex(s);
+        BigUnsigned b = BigUnsigned::fromHex(s);
+        BigUnsigned c = a + b;
 
         std::string res = "";
         res.append("1E01E00");
@@ -212,7 +212,7 @@ TEST_CASE("BigInt addition") {
     }
 }
 
-TEST_CASE("BigInt substraction") {
+TEST_CASE("BigUnsigned substraction") {
     {
         /*
          * Check that we catch an exception when minuend is smaller than substrahend
@@ -231,10 +231,10 @@ TEST_CASE("BigInt substraction") {
         s2.append("00000000");
         s2.append("00000000");
 
-        BigInt a = BigInt::fromHex(s1);
-        BigInt b = BigInt::fromHex(s2);
+        BigUnsigned a = BigUnsigned::fromHex(s1);
+        BigUnsigned b = BigUnsigned::fromHex(s2);
 
-        CHECK_THROWS_WITH_MESSAGE(a -= b, "BigInt::substract: result is negative", "std::runtime_error");
+        CHECK_THROWS_WITH_MESSAGE(a -= b, "BigUnsigned::substract: result is negative", "std::runtime_error");
     }
 
     {
@@ -259,8 +259,8 @@ TEST_CASE("BigInt substraction") {
         s2.append("00000000");
         s2.append("00000001");
 
-        BigInt a = BigInt::fromHex(s1);
-        BigInt b = BigInt::fromHex(s2);
+        BigUnsigned a = BigUnsigned::fromHex(s1);
+        BigUnsigned b = BigUnsigned::fromHex(s2);
 
         a -= b;
 
@@ -292,8 +292,8 @@ TEST_CASE("BigInt substraction") {
         s2.append("EFEFEFEF");
         s2.append("EFEFEFEF");
 
-        BigInt a = BigInt::fromHex(s1);
-        BigInt b = BigInt::fromHex(s2);
+        BigUnsigned a = BigUnsigned::fromHex(s1);
+        BigUnsigned b = BigUnsigned::fromHex(s2);
 
         a -= b;
 
@@ -317,8 +317,8 @@ TEST_CASE("BigInt substraction") {
         s1.append("FFFFFFFF");
         s1.append("FFFFFFFF");
 
-        BigInt a = BigInt::fromHex(s1);
-        BigInt b = BigInt::fromHex(s1);
+        BigUnsigned a = BigUnsigned::fromHex(s1);
+        BigUnsigned b = BigUnsigned::fromHex(s1);
 
         a -= b;
 
@@ -327,7 +327,7 @@ TEST_CASE("BigInt substraction") {
     }
 }
 
-TEST_CASE("BigInt multiplication") {
+TEST_CASE("BigUnsigned multiplication") {
     {
         /*
          * Simple multiplication that is easy to predict
@@ -349,8 +349,8 @@ TEST_CASE("BigInt multiplication") {
         s.append("0000003F");
         s.append("0000003F");
 
-        BigInt a = BigInt::fromHex(s);
-        BigInt b = BigInt::fromHex(s);
+        BigUnsigned a = BigUnsigned::fromHex(s);
+        BigUnsigned b = BigUnsigned::fromHex(s);
         a *= b;
 
         std::string res = "";
@@ -373,23 +373,23 @@ TEST_CASE("BigInt multiplication") {
          * s = 0xF * 2^59
          * s^2 = 0xF * 0xF * 2^118 = 0xE1 * 2^118
         */
-       std::string s = "";
-       s.append("F0000000");
-       s.append("00000000");
+        std::string s = "";
+        s.append("F0000000");
+        s.append("00000000");
 
-       BigInt a = BigInt::fromHex(s);
-       BigInt b = BigInt::fromHex(s);
+        BigUnsigned a = BigUnsigned::fromHex(s);
+        BigUnsigned b = BigUnsigned::fromHex(s);
 
-       a *= b;
+        a *= b;
 
-       std::string res = "";
-       res.append("E1000000");
-       res.append("00000000");
-       res.append("00000000");
-       res.append("00000000");
+        std::string res = "";
+        res.append("E1000000");
+        res.append("00000000");
+        res.append("00000000");
+        res.append("00000000");
 
-       CHECK(!a.isZero());
-       CHECK_EQ(a.limb.size(), 2);
-       CHECK_EQ(a.toHex(), res);
+        CHECK(!a.isZero());
+        CHECK_EQ(a.limb.size(), 2);
+        CHECK_EQ(a.toHex(), res);
     }
 }

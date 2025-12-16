@@ -12,7 +12,7 @@ DIR_DOCTEST = $(DIR_EXTERNAL)/doctest
 DIR_BUILD = build
 
 SOURCE_TESTS = $(wildcard $(DIR_TESTS)/*.cpp)
-BIN_TESTS = $(DIR_BUILD)/bitest
+BIN_TESTS = $(DIR_BUILD)/butest
 
 all: test
 
