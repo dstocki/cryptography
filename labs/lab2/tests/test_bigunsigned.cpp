@@ -2,7 +2,7 @@
 #include "doctest/doctest.h"
 #include "bigunsigned.hpp"
 
-TEST_CASE("BigUnsigned constructors and isZero function") {
+TEST_CASE("BigUnsigned constructors, isZero, isOne") {
     {
         /*
          * Check there are no limbs created when default constructor is used
@@ -35,6 +35,18 @@ TEST_CASE("BigUnsigned constructors and isZero function") {
         */
         BigUnsigned a(UINT64_MAX + 1);
         CHECK_EQ(a.toHex(), "0");
+    }
+
+    {
+        BigUnsigned a(1);
+        BigUnsigned b(0);
+
+        CHECK(a.isOne());
+        CHECK(!b.isOne());
+        CHECK(!a.isZero());
+        CHECK(b.isZero());
+        CHECK_EQ(a.limb.size(), 1);
+        CHECK_EQ(b.limb.size(), 0);
     }
 }
 
@@ -390,6 +402,131 @@ TEST_CASE("BigUnsigned multiplication") {
 
         CHECK(!a.isZero());
         CHECK_EQ(a.limb.size(), 2);
+        CHECK_EQ(a.toHex(), res);
+    }
+}
+
+TEST_CASE("BigUnsigned shifting") {
+    {
+        /*
+         * Check that shifts to both sides work on single limb number
+        */
+        BigUnsigned a = BigUnsigned::fromHex("F0F");
+
+        a << 30;
+        CHECK_EQ(a.toHex(), "F0F");
+
+        a <<= 30;
+        CHECK_EQ(a.toHex(), "3C3C0000000");
+
+        a >>= 30;
+        CHECK_EQ(a.toHex(), "F0F");
+
+        a >>= 9;
+        CHECK_EQ(a.toHex(), "7");
+
+        a >>= 300;
+        CHECK(a.isZero());
+
+        a <<= 1000;
+        CHECK(a.isZero());
+    }
+
+    {
+        /*
+         * Check that shifts to both sides work on multi limb number
+        */
+        std::string s = "";
+        s.append("F0F00F0F");
+        s.append("F0F00F0F");
+        s.append("F0F00F0F");
+        s.append("F0F00F0F");
+        s.append("F0F00F0F");
+        s.append("F0F00F0F");
+        s.append("F0F00F0F");
+        s.append("F0F00F0F");
+        s.append("F0F00F0F");
+
+        BigUnsigned a = BigUnsigned::fromHex(s);
+        CHECK_EQ(a.limb.size(), 5);
+
+        a <<= 23;
+        std::string res = "";
+        res.append("787807");
+        res.append("87F87807");
+        res.append("87F87807");
+        res.append("87F87807");
+        res.append("87F87807");
+        res.append("87F87807");
+        res.append("87F87807");
+        res.append("87F87807");
+        res.append("87F87807");
+        res.append("87800000");
+        CHECK_EQ(a.toHex(), res);
+        CHECK_EQ(a.limb.size(), 5);
+
+        a <<= 1;
+        res.clear();
+        res.append("F0F00F");
+        res.append("0FF0F00F");
+        res.append("0FF0F00F");
+        res.append("0FF0F00F");
+        res.append("0FF0F00F");
+        res.append("0FF0F00F");
+        res.append("0FF0F00F");
+        res.append("0FF0F00F");
+        res.append("0FF0F00F");
+        res.append("0F000000");
+        CHECK_EQ(a.toHex(), res);
+        CHECK_EQ(a.limb.size(), 5);
+
+        a >>= 24;
+
+        CHECK_EQ(a.toHex(), s);
+        CHECK_EQ(a.limb.size(), 5);
+    }
+
+    {
+        /*
+         * Check that a proper shift results in new limb creation
+        */
+        std::string s = "";
+        s.append("F0000000");
+        s.append("F0000000");
+
+        BigUnsigned a = BigUnsigned::fromHex(s);
+        CHECK_EQ(a.limb.size(), 1);
+
+        a <<= 1;
+        std::string res = "";
+        res.append("1");
+        res.append("E0000001");
+        res.append("E0000000");
+
+        CHECK(!a.isZero());
+        CHECK_EQ(a.limb.size(), 2);
+        CHECK_EQ(a.toHex(), res);
+    }
+
+    {
+        /*
+         * Check that a proper shift results in limb deletion
+        */
+        std::string s = "";
+        s.append("0000000F");
+        s.append("00000001");
+        s.append("00000001");
+
+        BigUnsigned a = BigUnsigned::fromHex(s);
+        CHECK_EQ(a.limb.size(), 2);
+
+        a >>= 4;
+        std::string res = "";
+        res.append("F0000000");
+        res.append("10000000");
+
+        CHECK(!a.isZero());
+        CHECK_EQ(a.limb.size(), 1);
         CHECK_EQ(a.toHex(), res);
     }
 }

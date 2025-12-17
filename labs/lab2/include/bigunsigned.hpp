@@ -54,6 +54,14 @@ struct BigUnsigned {
         return limb.empty();
     }
 
+    bool isOne(void) const {
+        if (limb.size() == 1) {
+            return (limb[0] == 1ULL);
+        } else {
+            return false;
+        }
+    }
+
     /* Brief: Removes all MSLs such that MSL == 0 */
     void normalize(void) {
         while (!limb.empty() && limb.back() == 0) {
@@ -87,8 +95,8 @@ struct BigUnsigned {
 
     /*
         +--------------------------------------------------+
-        | Let a_i be i-th limb of BigUnsigned a                 |
-        | Let b_i be i-th limb of BigUnsigned b                 |
+        | Let a_i be i-th limb of BigUnsigned a            |
+        | Let b_i be i-th limb of BigUnsigned b            |
         |                                                  |
         | this = a_0 a_1 ... a_m                           |
         | other = b_0 b_1 ... b_n                          |
@@ -181,25 +189,71 @@ struct BigUnsigned {
         return *this;
     }
 
+    BigUnsigned& operator<<=(const size_t bits) {
+        if (isZero() || bits == 0) return *this;
+
+        const size_t nNewLimbs = bits / 64;
+        const size_t nNewBits = bits % 64;
+
+        if (nNewLimbs > 0) limb.insert(limb.begin(), nNewLimbs, 0);
+        if (nNewBits != 0) {
+            const size_t nLimbs = limb.size();
+
+            uint64_t carry = 0;
+            for (size_t i = nNewLimbs; i < nLimbs; ++i) {
+                const uint64_t val = limb[i];
+                limb[i] = (val << nNewBits) | carry;
+                carry = (val >> (64 - nNewBits));
+            }
+
+            if (carry != 0) limb.push_back(carry);
+        }
+
+        normalize();
+        return *this;
+    }
+
+    BigUnsigned& operator>>=(const size_t bits) {
+        if (bits == 0 || isZero()) return *this;
+
+        const size_t nDelLimbs = bits / 64;
+        const size_t nDelBits = bits % 64;
+        const size_t nLimbsBefore = limb.size();
+
+        if (nDelLimbs >= nLimbsBefore) limb.erase(limb.begin(), limb.end());
+        else {
+            if (nDelLimbs > 0) limb.erase(limb.begin(), limb.begin() + nDelLimbs);
+            if (nDelBits != 0) {
+                const size_t nLimbsAfter = limb.size();
+                uint64_t carry = 0;
+                for (size_t i = nLimbsAfter; i-- > 0; ) {
+                    const uint64_t val = limb[i];
+                    limb[i] = (val >> nDelBits) | carry;
+                    carry = val << (64 - nDelBits);
+                }
+            }
+        }
+
+        normalize();
+        return *this;
+    }
+
+    BigUnsigned& operator+=(const BigUnsigned& other) { return add(other); }
+    BigUnsigned& operator-=(const BigUnsigned& other) { return substract(other); }
+    BigUnsigned& operator*=(const BigUnsigned& other) { return mult(other); }
+
+    friend BigUnsigned operator+(BigUnsigned a, const BigUnsigned& b) { a += b; return a; }
+    friend BigUnsigned operator-(BigUnsigned a, const BigUnsigned& b) { a -= b; return a; }
+    friend BigUnsigned operator*(BigUnsigned a, const BigUnsigned& b) { a *= b; return a; }
+    friend BigUnsigned operator<<(BigUnsigned x, const size_t bits) { x <<= bits; return x; }
+    friend BigUnsigned operator>>(BigUnsigned x, const size_t bits) { x >>= bits; return x; }
+
     friend bool operator>(const BigUnsigned& a, const BigUnsigned& b) { return compare(a, b) == 1; }
     friend bool operator>=(const BigUnsigned& a, const BigUnsigned& b) { return compare(a, b) != -1; }
     friend bool operator<(const BigUnsigned& a, const BigUnsigned& b) { return compare(a, b) == -1; }
     friend bool operator<=(const BigUnsigned& a, const BigUnsigned& b) { return compare(a, b) != 1; }
     friend bool operator==(const BigUnsigned& a, const BigUnsigned& b) { return compare(a, b) == 0; }
     friend bool operator!=(const BigUnsigned& a, const BigUnsigned& b) { return compare(a, b) != 0; }
-
-    BigUnsigned& operator+=(const BigUnsigned& other) { return add(other); }
-    friend BigUnsigned operator+(BigUnsigned a, const BigUnsigned& b) { a += b; return a; }
-
-    BigUnsigned& operator-=(const BigUnsigned& other) { return substract(other); }
-    friend BigUnsigned operator-(BigUnsigned a, const BigUnsigned& b) { a -= b; return a; }
-
-    BigUnsigned& operator*=(const BigUnsigned& other) { return mult(other); }
-    friend BigUnsigned operator*(BigUnsigned a, const BigUnsigned& b) { a *= b; return a; }
-
-    friend BigUnsigned operator/(BigUnsigned a, const BigUnsigned& b) {
-        return a;
-    }
 
     /*
         +--------------------------------------------------------------------------------------------------+
