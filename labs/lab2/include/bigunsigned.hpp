@@ -329,6 +329,24 @@ struct BigUnsigned {
         return {quotient, remainder};
     }    
 
+    uint64_t divmod_small(const uint64_t divisor) {
+        if (divisor == 0) throw std::runtime_error("BigUnsigned::divmod_small division by zero.");
+        if (isZero()) return 0ULL;
+        if (divisor == 1) return 0ULL;
+        
+        __uint128_t carry = 0;
+        const size_t nLimbs = limb.size();
+        for (size_t i = 0; i < nLimbs; ++i) {
+            const uint64_t iLimb = limb[nLimbs - i - 1];
+            const __uint128_t curr = (carry << 64) | iLimb;
+            limb[nLimbs - i - 1] = static_cast<uint64_t>(curr / divisor);
+            carry = static_cast<uint64_t>(curr % divisor);
+        }
+
+        normalize();
+        return static_cast<uint64_t>(carry);
+    }
+
     BigUnsigned& operator<<=(const size_t bits) {
         if (isZero() || bits == 0) return *this;
 
@@ -390,9 +408,20 @@ struct BigUnsigned {
         *this = std::move(p.first);
         return *this;
     }
+    BigUnsigned& operator/=(const uint64_t other) {
+        (void) divmod_small(other);
+        return *this;
+    }
     BigUnsigned& operator%=(const BigUnsigned& other) {
         const auto p = divmod(other);
         *this = std::move(p.second);
+        return *this;
+    }
+    BigUnsigned& operator%=(const uint64_t other) {
+        const uint64_t rem = divmod_small(other);
+        limb.clear();
+
+        if (rem != 0) limb.push_back(rem);
         return *this;
     }
     BigUnsigned& operator=(const uint64_t other) {
@@ -411,7 +440,9 @@ struct BigUnsigned {
     friend BigUnsigned operator*(BigUnsigned a, const uint64_t b) { a *= b; return a; }
     friend BigUnsigned operator*(const uint64_t a, BigUnsigned b) { b *= a; return b; }
     friend BigUnsigned operator/(BigUnsigned a, const BigUnsigned& b) { a /= b; return a; }
+    friend BigUnsigned operator/(BigUnsigned a, const uint64_t b) { a /= b; return a; }
     friend BigUnsigned operator%(BigUnsigned a, const BigUnsigned& b) { a %= b; return a; }
+    friend BigUnsigned operator%(BigUnsigned a, const uint64_t b) { a %= b; return a; }
     friend BigUnsigned operator<<(BigUnsigned x, const size_t bits) { x <<= bits; return x; }
     friend BigUnsigned operator>>(BigUnsigned x, const size_t bits) { x >>= bits; return x; }
 

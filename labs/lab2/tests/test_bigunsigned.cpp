@@ -707,13 +707,16 @@ TEST_CASE("BigUnsigned shifting") {
 
 TEST_CASE("BigUnsigned opeartions with uint64_t") {
     {
-        BigUnsigned a = BigUnsigned::fromHex("789789789789789789");
+        std::string s = "789789789789789789";
+        BigUnsigned a = BigUnsigned::fromHex(s);
 
-        a += 16;
-        a -= 16;
-        a *= 16;
+        const uint64_t val = 37;
+        a += val;
+        a -= val;
+        a *= val;
+        a /= val;
 
-        CHECK_EQ(a.toHex(), "7897897897897897890");
+        CHECK_EQ(a.toHex(), s);
 
         BigUnsigned b(100);
         CHECK(b == 100);
