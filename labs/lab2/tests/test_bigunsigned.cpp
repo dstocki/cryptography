@@ -48,6 +48,32 @@ TEST_CASE("BigUnsigned constructors, isZero, isOne") {
         CHECK_EQ(a.limb.size(), 1);
         CHECK_EQ(b.limb.size(), 0);
     }
+
+    {
+        /*
+         * Check that copy constructor works
+        */
+        BigUnsigned a(32);
+        BigUnsigned b(a);
+
+        CHECK_EQ(a, b);
+
+        b += 10;
+
+        CHECK_NE(a, b);
+    }
+
+    {
+        /*
+         * Check that assignment operator works for uint64_t
+        */
+        const uint64_t val = 1234ULL;
+
+        BigUnsigned a;
+        a = val;
+
+        CHECK_EQ(a, val);
+    }
 }
 
 TEST_CASE("BigUnsigned fromHex/toHex and normalization function") {
@@ -74,9 +100,7 @@ TEST_CASE("BigUnsigned fromHex/toHex and normalization function") {
         /*
          * Check that non hex digit destroys constructor and returns empty BigUnsigned
         */
-        BigUnsigned a = BigUnsigned::fromHex("11111G111");
-        CHECK(a.isZero());
-        CHECK_EQ(a.toHex(), "0");
+        CHECK_THROWS_WITH_MESSAGE(BigUnsigned a = BigUnsigned::fromHex("11111G111"), "BigUnsigned::fromHex invalid character.", "std::runtime_error");
     }
 
     {
@@ -406,6 +430,132 @@ TEST_CASE("BigUnsigned multiplication") {
     }
 }
 
+TEST_CASE("BigUnsigned division and modulo") {
+    {
+        /*
+         * Check different use cases of divmod
+        */
+        BigUnsigned a(1);
+        BigUnsigned b(0);
+
+        CHECK_THROWS_WITH_MESSAGE(a /= b, "BigUnsigned::divmod division by zero.", "std::runtime_error");
+
+        b / a;
+        CHECK_EQ(a, 1ULL);
+        CHECK_EQ(b, 0ULL);
+
+        a /= a;
+        CHECK_EQ(a, 1ULL);
+
+        CHECK_THROWS_WITH_MESSAGE(b /= b, "BigUnsigned::divmod division by zero.", "std::runtime_error");
+
+        b /= a;
+        CHECK_EQ(b, 0);
+
+        a = 1223;
+        b = 2222;
+
+        a /= b;
+        CHECK_EQ(a, 0);
+    }
+
+    {
+        /*
+         * Check that a larger example for division works correctly
+        */
+        std::string s = "";
+        s.append("1040104");
+        s.append("01040104");
+        s.append("01040104");
+        s.append("01040104");
+        s.append("01040104");
+
+        std::string s2 = "";
+        s2.append("104010");
+        s2.append("00104010");
+        s2.append("00104010");
+
+        BigUnsigned a = BigUnsigned::fromHex(s);
+        BigUnsigned b = BigUnsigned::fromHex(s2);
+
+        CHECK_EQ(b.limb.size(), 2);
+
+        BigUnsigned c = a / b;
+
+        std::string res = "";
+        res.append("10");
+        res.append("00003F03");
+        res.append("B2337FCD");
+
+        CHECK_EQ(c.toHex(), res);
+
+        BigUnsigned d = a % b;
+        BigUnsigned e = (b * c) + d;
+
+        CHECK_EQ(e.toHex(), s);
+    }
+
+    {
+        /*
+         * Check that a larger example for division works correctly with totally random numbers
+        */
+        std::string s = "";
+        s.append("53515152");
+        s.append("64236252");
+        s.append("75647454");
+        s.append("AFFAACDA");
+        s.append("11111111");
+
+        std::string s2 = "";
+        s2.append("55353FFF");
+        s2.append("30303032");
+        s2.append("00000001");
+
+        BigUnsigned a = BigUnsigned::fromHex(s);
+        BigUnsigned b = BigUnsigned::fromHex(s2);
+
+        CHECK_EQ(b.limb.size(), 2);
+
+        BigUnsigned c = a / b;
+
+        std::string res = "";
+        res.append("FA521154");
+        res.append("9210C077");
+
+        CHECK_EQ(c.toHex(), res);
+
+        BigUnsigned d = a % b;
+        BigUnsigned e = (b * c) + d;
+
+        CHECK_EQ(e.toHex(), s);
+    }
+
+    {
+        /*
+         * Check that modulo works for a larger example
+        */
+        std::string s1 = "1000000000000000000";
+        std::string s2 = "100000000";
+
+        BigUnsigned v1 = BigUnsigned::fromHex(s1);
+        BigUnsigned v2 = BigUnsigned::fromHex(s2);
+        BigUnsigned v3 = v1 % v2;
+        BigUnsigned v4 = v2 % v1;
+
+        CHECK_EQ(v3, 0ULL);
+        CHECK_EQ(v4, v2);
+
+        s1 = "1000000000001111011";
+        s2 = "100000000";
+
+        v1 = BigUnsigned::fromHex(s1);
+        v2 = BigUnsigned::fromHex(s2);
+        v3 = v1 % v2;
+
+        CHECK_EQ(v3.toHex(), "1111011");
+    }
+}
+
 TEST_CASE("BigUnsigned shifting") {
     {
         /*
@@ -528,5 +678,47 @@ TEST_CASE("BigUnsigned shifting") {
         CHECK(!a.isZero());
         CHECK_EQ(a.limb.size(), 1);
         CHECK_EQ(a.toHex(), res);
+    }
+
+    {
+        /*
+         * Check that getNBits works correctly
+        */
+        std::string s1 = "";
+        s1.append("FFFFFFFF");
+        s1.append("FFFFFFFF");
+        s1.append("FFFFFFFF");
+        s1.append("FFFFFFFF");
+        s1.append("FFFFFFFF");
+
+        std::string s2 = "";
+        s2.append("00010001");
+        s2.append("00010001");
+        s2.append("00010001");
+        s2.append("00010001");
+
+        BigUnsigned a = BigUnsigned::fromHex(s1);
+        BigUnsigned b = BigUnsigned::fromHex(s2);
+
+        CHECK_EQ(a.getNBits(), 160);
+        CHECK_EQ(b.getNBits(), 113);
+    }
+}
+
+TEST_CASE("BigUnsigned opeartions with uint64_t") {
+    {
+        BigUnsigned a = BigUnsigned::fromHex("789789789789789789");
+
+        a += 16;
+        a -= 16;
+        a *= 16;
+
+        CHECK_EQ(a.toHex(), "7897897897897897890");
+
+        BigUnsigned b(100);
+        CHECK(b == 100);
+        CHECK(!(b != 100));
+        CHECK(b > 99);
+        CHECK(b < 101);
     }
 }

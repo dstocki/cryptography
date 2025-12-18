@@ -43,10 +43,11 @@
 struct BigUnsigned {
     std::vector<uint64_t> limb;
 
-    BigUnsigned() = default;
+    BigUnsigned() noexcept = default;
+    BigUnsigned(const BigUnsigned& v) noexcept = default;
 
     /* Designed for shadowing simple uint64_t */
-    BigUnsigned(const uint64_t v) {
+    explicit BigUnsigned(const uint64_t v) {
         if (v != 0) limb.push_back(v);
     }
 
@@ -67,6 +68,18 @@ struct BigUnsigned {
         while (!limb.empty() && limb.back() == 0) {
             limb.pop_back();
         }
+    }
+
+    size_t getNBits(void) const {
+        const size_t nLimbs = limb.size();
+        if (nLimbs == 0) return 0;
+
+        uint64_t msl = limb.back();
+        uint8_t zeros = 0;
+        const uint64_t mask = (uint64_t{1} << 63);
+        while ((msl & mask) == 0) { ++zeros; msl <<= 1; }
+        
+        return (nLimbs - 1) * 64 + (64 - zeros);
     }
 
     /*
@@ -90,6 +103,22 @@ struct BigUnsigned {
             if (voa < vob) return -1;
         }
 
+        return 0;
+    }
+
+    /*
+     * a > b => return 1
+     * a < b => return -1
+     * a == b => return 0
+    */
+    static int compare(const BigUnsigned& a, const uint64_t b) {
+        const size_t nLimbs = a.limb.size();
+        
+        if (nLimbs == 0) return (b == 0) ? 0 : -1;
+        if (nLimbs > 1) return 1;
+
+        if (a.limb[0] < b) return -1;
+        if (a.limb[0] > b) return 1;
         return 0;
     }
 
@@ -128,6 +157,30 @@ struct BigUnsigned {
         return *this;
     }
 
+    BigUnsigned& add_small(const uint64_t other) {
+        if (other == 0) return *this;
+        if (isZero()) {
+            limb.push_back(other);
+            return *this;
+        }
+
+        const size_t nLimbs = limb.size();
+
+        uint64_t carry = other;
+        for (size_t i = 0; i < nLimbs; ++i) {
+            const uint64_t iLimb = limb[i];
+            const __uint128_t iSum =
+                static_cast<__uint128_t>(iLimb) +
+                static_cast<__uint128_t>(carry);
+
+            limb[i] = static_cast<uint64_t>(iSum);
+            carry = static_cast<uint64_t>(iSum >> 64);
+        }
+
+        if (carry != 0) limb.push_back(carry);
+        return *this;
+    }
+
     BigUnsigned& substract(const BigUnsigned& other) {
         const size_t lenOfThis = limb.size();
         const size_t lenOfOthr = other.limb.size();
@@ -150,6 +203,35 @@ struct BigUnsigned {
                 borrow = 0;
             }
             
+            limb[i] = static_cast<uint64_t>(diff);
+        }
+
+        normalize();
+        return *this;
+    }
+
+    BigUnsigned& substract_small(const uint64_t other) {
+        if (*this < other) throw std::runtime_error("BigUnsigned::substract_small result is negative.");
+
+        uint64_t borrow = other;
+
+        const size_t nLimbs = limb.size();
+        for (size_t i = 0; i < nLimbs; ++i) {
+            if (borrow == 0) break;
+
+            const uint64_t minuend = limb[i];
+            const uint64_t substrahend = borrow;
+            __int128_t diff =
+                static_cast<__int128_t>(minuend) -
+                static_cast<__int128_t>(substrahend);
+
+            if (diff < 0) {
+                diff += (static_cast<__int128_t>(1) << 64);
+                borrow = 1;   
+            } else {
+                borrow = 0;
+            }
+
             limb[i] = static_cast<uint64_t>(diff);
         }
 
@@ -189,6 +271,64 @@ struct BigUnsigned {
         return *this;
     }
 
+    BigUnsigned& mult_small(const uint64_t other) {
+        if (other == 1) return *this;
+        if (other == 0) {
+            limb.clear();
+            return *this;
+        }
+
+        uint64_t carry = 0;
+        const uint64_t multiplier = other;
+        const size_t nLimbs = limb.size();
+        for (size_t i = 0; i < nLimbs; ++i) {
+            const uint64_t multiplicand = limb[i];
+            const __uint128_t product =
+                static_cast<__uint128_t>(multiplicand) *
+                static_cast<__uint128_t>(multiplier) +
+                static_cast<__uint128_t>(carry);
+
+            limb[i] = static_cast<uint64_t>(product);
+            carry = static_cast<uint64_t>(product >> 64);
+        }
+
+        if (carry != 0) limb.push_back(carry);
+        return *this;
+    }
+
+    std::pair<BigUnsigned, BigUnsigned>
+    divmod(const BigUnsigned& divisor) const {
+        if (divisor.isZero()) throw std::runtime_error("BigUnsigned::divmod division by zero.");
+        if (isZero()) return {BigUnsigned{0}, BigUnsigned{0}};
+        if (*this < divisor) return {BigUnsigned{0}, *this};
+        if (*this == divisor) return {BigUnsigned{1}, BigUnsigned{0}};
+
+        BigUnsigned quotient(0);
+        BigUnsigned remainder(*this);
+
+        const size_t nBitsA = getNBits();
+        const size_t nBitsB = divisor.getNBits();
+        const size_t bitDiff = nBitsA - nBitsB;
+
+        BigUnsigned shiftedDivisor = divisor << bitDiff;
+        size_t shift = bitDiff;
+
+        while (true) {
+            if (remainder >= shiftedDivisor) {
+                remainder -= shiftedDivisor;
+                quotient += (BigUnsigned(1) << shift);
+            }
+
+            if (shift == 0) break;
+            shiftedDivisor >>= 1;
+            --shift;
+        }
+
+        quotient.normalize();
+        remainder.normalize();
+        return {quotient, remainder};
+    }    
+
     BigUnsigned& operator<<=(const size_t bits) {
         if (isZero() || bits == 0) return *this;
 
@@ -209,7 +349,6 @@ struct BigUnsigned {
             if (carry != 0) limb.push_back(carry);
         }
 
-        normalize();
         return *this;
     }
 
@@ -220,17 +359,19 @@ struct BigUnsigned {
         const size_t nDelBits = bits % 64;
         const size_t nLimbsBefore = limb.size();
 
-        if (nDelLimbs >= nLimbsBefore) limb.erase(limb.begin(), limb.end());
-        else {
-            if (nDelLimbs > 0) limb.erase(limb.begin(), limb.begin() + nDelLimbs);
-            if (nDelBits != 0) {
-                const size_t nLimbsAfter = limb.size();
-                uint64_t carry = 0;
-                for (size_t i = nLimbsAfter; i-- > 0; ) {
-                    const uint64_t val = limb[i];
-                    limb[i] = (val >> nDelBits) | carry;
-                    carry = val << (64 - nDelBits);
-                }
+        if (nDelLimbs >= nLimbsBefore) {
+            limb.clear();
+            return *this;
+        }
+
+        if (nDelLimbs > 0) limb.erase(limb.begin(), limb.begin() + nDelLimbs);
+        if (nDelBits != 0) {
+            const size_t nLimbsAfter = limb.size();
+            uint64_t carry = 0;
+            for (size_t i = nLimbsAfter; i-- > 0; ) {
+                const uint64_t val = limb[i];
+                limb[i] = (val >> nDelBits) | carry;
+                carry = val << (64 - nDelBits);
             }
         }
 
@@ -239,21 +380,59 @@ struct BigUnsigned {
     }
 
     BigUnsigned& operator+=(const BigUnsigned& other) { return add(other); }
+    BigUnsigned& operator+=(const uint64_t other) { return add_small(other); }
     BigUnsigned& operator-=(const BigUnsigned& other) { return substract(other); }
+    BigUnsigned& operator-=(const uint64_t other) { return substract_small(other); }
     BigUnsigned& operator*=(const BigUnsigned& other) { return mult(other); }
+    BigUnsigned& operator*=(const uint64_t other) { return mult_small(other); }
+    BigUnsigned& operator/=(const BigUnsigned& other) {
+        const auto p = divmod(other);
+        *this = std::move(p.first);
+        return *this;
+    }
+    BigUnsigned& operator%=(const BigUnsigned& other) {
+        const auto p = divmod(other);
+        *this = std::move(p.second);
+        return *this;
+    }
+    BigUnsigned& operator=(const uint64_t other) {
+        limb.clear();
+        if (other != 0) limb.push_back(other);
+
+        return *this;
+    }
 
     friend BigUnsigned operator+(BigUnsigned a, const BigUnsigned& b) { a += b; return a; }
+    friend BigUnsigned operator+(BigUnsigned a, const uint64_t b) { a += b; return a; }
+    friend BigUnsigned operator+(const uint64_t a, BigUnsigned b) { b += a; return b; }
     friend BigUnsigned operator-(BigUnsigned a, const BigUnsigned& b) { a -= b; return a; }
+    friend BigUnsigned operator-(BigUnsigned a, const uint64_t b) { a -= b; return a; }
     friend BigUnsigned operator*(BigUnsigned a, const BigUnsigned& b) { a *= b; return a; }
+    friend BigUnsigned operator*(BigUnsigned a, const uint64_t b) { a *= b; return a; }
+    friend BigUnsigned operator*(const uint64_t a, BigUnsigned b) { b *= a; return b; }
+    friend BigUnsigned operator/(BigUnsigned a, const BigUnsigned& b) { a /= b; return a; }
+    friend BigUnsigned operator%(BigUnsigned a, const BigUnsigned& b) { a %= b; return a; }
     friend BigUnsigned operator<<(BigUnsigned x, const size_t bits) { x <<= bits; return x; }
     friend BigUnsigned operator>>(BigUnsigned x, const size_t bits) { x >>= bits; return x; }
 
     friend bool operator>(const BigUnsigned& a, const BigUnsigned& b) { return compare(a, b) == 1; }
+    friend bool operator>(const BigUnsigned& a, const uint64_t b) { return compare(a, b) == 1; }
+    friend bool operator>(const uint64_t a, const BigUnsigned& b) { return compare(b, a) == -1; }
     friend bool operator>=(const BigUnsigned& a, const BigUnsigned& b) { return compare(a, b) != -1; }
+    friend bool operator>=(const BigUnsigned& a, const uint64_t b) { return compare(a, b) != -1; }
+    friend bool operator>=(const uint64_t a, const BigUnsigned& b) { return compare(b, a) != 1; }
     friend bool operator<(const BigUnsigned& a, const BigUnsigned& b) { return compare(a, b) == -1; }
+    friend bool operator<(const BigUnsigned& a, const uint64_t b) { return compare(a, b) == -1; }
+    friend bool operator<(const uint64_t a, const BigUnsigned& b) { return compare(b, a) == 1; }
     friend bool operator<=(const BigUnsigned& a, const BigUnsigned& b) { return compare(a, b) != 1; }
+    friend bool operator<=(const BigUnsigned& a, const uint64_t b) { return compare(a, b) != 1; }
+    friend bool operator<=(const uint64_t a, const BigUnsigned& b) { return compare(b, a) != -1; }
     friend bool operator==(const BigUnsigned& a, const BigUnsigned& b) { return compare(a, b) == 0; }
+    friend bool operator==(const BigUnsigned& a, const uint64_t b) { return compare(a, b) == 0; }
+    friend bool operator==(const uint64_t a, const BigUnsigned& b) { return compare(b, a) == 0; }
     friend bool operator!=(const BigUnsigned& a, const BigUnsigned& b) { return compare(a, b) != 0; }
+    friend bool operator!=(const BigUnsigned& a, const uint64_t b) { return compare(a, b) != 0; }
+    friend bool operator!=(const uint64_t a, const BigUnsigned& b) { return compare(b, a) != 0; }
 
     /*
         +--------------------------------------------------------------------------------------------------+
@@ -295,7 +474,7 @@ struct BigUnsigned {
                 const char c = s.at(--idx);
                 const int conv = ahxtoi(c);
 
-                if (conv < 0) return BigUnsigned();
+                if (conv < 0) throw std::runtime_error("BigUnsigned::fromHex invalid character.");
 
                 candidate |= (static_cast<uint64_t>(conv) << (nhexes * 4));
                 ++nhexes;
