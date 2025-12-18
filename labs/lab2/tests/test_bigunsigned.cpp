@@ -24,7 +24,7 @@ TEST_CASE("BigUnsigned constructors, isZero, isOne") {
          * Check that single U64 limb constructor works
         */
         BigUnsigned a(57); // 00111001
-        CHECK(a.toHex() == "39");
+        CHECK(a.toBase16() == "39");
         CHECK_EQ(a.limb.size(), 1);
     }
 
@@ -34,7 +34,7 @@ TEST_CASE("BigUnsigned constructors, isZero, isOne") {
          * and such attempt results in overflow
         */
         BigUnsigned a(UINT64_MAX + 1);
-        CHECK_EQ(a.toHex(), "0");
+        CHECK_EQ(a.toBase16(), "0");
     }
 
     {
@@ -76,23 +76,23 @@ TEST_CASE("BigUnsigned constructors, isZero, isOne") {
     }
 }
 
-TEST_CASE("BigUnsigned fromHex/toHex and normalization function") {
+TEST_CASE("BigUnsigned fromBase16/toBase16 and normalization function") {
     {
         /*
          * Check that 0's hex string is treated as no limbs
         */
-        BigUnsigned a = BigUnsigned::fromHex("0000000000");
+        BigUnsigned a = BigUnsigned::fromBase16("0000000000");
         CHECK(a.isZero());
-        CHECK_EQ(a.toHex(), "0");
+        CHECK_EQ(a.toBase16(), "0");
     }
 
     {
         /*
          * Check that normalization erases all 0's before a non-zero value
         */
-        BigUnsigned a = BigUnsigned::fromHex("0000123");
+        BigUnsigned a = BigUnsigned::fromBase16("0000123");
         CHECK(!a.isZero());
-        CHECK_EQ(a.toHex(), "123");
+        CHECK_EQ(a.toBase16(), "123");
         CHECK_EQ(a.limb.size(), 1);
     }
 
@@ -100,17 +100,17 @@ TEST_CASE("BigUnsigned fromHex/toHex and normalization function") {
         /*
          * Check that non hex digit destroys constructor and returns empty BigUnsigned
         */
-        CHECK_THROWS_WITH_MESSAGE(BigUnsigned a = BigUnsigned::fromHex("11111G111"), "BigUnsigned::fromHex invalid character.", "std::runtime_error");
+        CHECK_THROWS_WITH_MESSAGE(BigUnsigned a = BigUnsigned::fromBase16("11111G111"), "BigUnsigned::fromBase16 invalid character.", "std::runtime_error");
     }
 
     {
         /*
-         * Check that toHex removes leading zeros in MSL
+         * Check that toBase16 removes leading zeros in MSL
         */
-        BigUnsigned a = BigUnsigned::fromHex("002001");
+        BigUnsigned a = BigUnsigned::fromBase16("002001");
         CHECK(!a.isZero());
         CHECK_EQ(a.limb.size(), 1);
-        CHECK_EQ(a.toHex(), "2001");
+        CHECK_EQ(a.toBase16(), "2001");
     }
 
     {
@@ -130,7 +130,7 @@ TEST_CASE("BigUnsigned fromHex/toHex and normalization function") {
         s.append("00000000"); // 8 hexes (32 bits)
         s.append("1");
 
-        BigUnsigned a = BigUnsigned::fromHex(s);
+        BigUnsigned a = BigUnsigned::fromBase16(s);
         CHECK(!a.isZero());
         CHECK_EQ(a.limb.size(), 3); // Without normalization would be 5
 
@@ -140,7 +140,7 @@ TEST_CASE("BigUnsigned fromHex/toHex and normalization function") {
         res.append("00000010");
         res.append("00000000");
         res.append("00000001");
-        CHECK_EQ(a.toHex(), res);
+        CHECK_EQ(a.toBase16(), res);
     }
 
     {
@@ -154,22 +154,22 @@ TEST_CASE("BigUnsigned fromHex/toHex and normalization function") {
         s.append("00000000");
         s.append("00000000");
 
-        BigUnsigned a = BigUnsigned::fromHex(s);
+        BigUnsigned a = BigUnsigned::fromBase16(s);
         CHECK(a.isZero());
-        CHECK_EQ(a.toHex(), "0");
+        CHECK_EQ(a.toBase16(), "0");
     }
 }
 
 TEST_CASE("BigUnsigned comparison operators") {
-    BigUnsigned a = BigUnsigned::fromHex("111");
-    BigUnsigned b = BigUnsigned::fromHex("1111");
-    BigUnsigned c = BigUnsigned::fromHex("11111");
-    BigUnsigned d = BigUnsigned::fromHex("1111F");
-    BigUnsigned e = BigUnsigned::fromHex("FFF");
-    BigUnsigned f = BigUnsigned::fromHex("111");
-    BigUnsigned g = BigUnsigned::fromHex("1111111111111111111111111111111111111111111111111"); // 49 nibbles
-    BigUnsigned h = BigUnsigned::fromHex("1111111111111111111111111111111111111111111111111");
-    BigUnsigned i = BigUnsigned::fromHex("2111111111111111111111111111111111111111111111111");
+    BigUnsigned a = BigUnsigned::fromBase16("111");
+    BigUnsigned b = BigUnsigned::fromBase16("1111");
+    BigUnsigned c = BigUnsigned::fromBase16("11111");
+    BigUnsigned d = BigUnsigned::fromBase16("1111F");
+    BigUnsigned e = BigUnsigned::fromBase16("FFF");
+    BigUnsigned f = BigUnsigned::fromBase16("111");
+    BigUnsigned g = BigUnsigned::fromBase16("1111111111111111111111111111111111111111111111111"); // 49 nibbles
+    BigUnsigned h = BigUnsigned::fromBase16("1111111111111111111111111111111111111111111111111");
+    BigUnsigned i = BigUnsigned::fromBase16("2111111111111111111111111111111111111111111111111");
     
     CHECK_LT(a, b);
     CHECK_LT(c, d);
@@ -194,26 +194,26 @@ TEST_CASE("BigUnsigned addition") {
         /*
          * Check if long consecutive carry is working
         */
-        BigUnsigned a = BigUnsigned::fromHex("FFFFFFFFFFFFFFFFF"); // 17 nibbles
-        BigUnsigned b = BigUnsigned::fromHex("FFFFFFFFFFFFFFFFF");
+        BigUnsigned a = BigUnsigned::fromBase16("FFFFFFFFFFFFFFFFF"); // 17 nibbles
+        BigUnsigned b = BigUnsigned::fromBase16("FFFFFFFFFFFFFFFFF");
         a += b;
 
         CHECK(!a.isZero());
         CHECK_EQ(a.limb.size(), 2);
-        CHECK_EQ(a.toHex(), "1FFFFFFFFFFFFFFFFE");
+        CHECK_EQ(a.toBase16(), "1FFFFFFFFFFFFFFFFE");
     }
 
     {
         /*
          * Check if carry returned from MSB in U64 creates a new limb
         */
-        BigUnsigned a = BigUnsigned::fromHex("8000000000000000"); // 16 nibbles
-        BigUnsigned b = BigUnsigned::fromHex("8000000000000000");
+        BigUnsigned a = BigUnsigned::fromBase16("8000000000000000"); // 16 nibbles
+        BigUnsigned b = BigUnsigned::fromBase16("8000000000000000");
         a += b;
 
         CHECK(!a.isZero());
         CHECK_EQ(a.limb.size(), 2);
-        CHECK_EQ(a.toHex(), "10000000000000000"); // 17 nibbles
+        CHECK_EQ(a.toBase16(), "10000000000000000"); // 17 nibbles
     }
 
     {
@@ -229,8 +229,8 @@ TEST_CASE("BigUnsigned addition") {
         s.append("00F00F00");
         s.append("00F00F00");
 
-        BigUnsigned a = BigUnsigned::fromHex(s);
-        BigUnsigned b = BigUnsigned::fromHex(s);
+        BigUnsigned a = BigUnsigned::fromBase16(s);
+        BigUnsigned b = BigUnsigned::fromBase16(s);
         BigUnsigned c = a + b;
 
         std::string res = "";
@@ -244,7 +244,7 @@ TEST_CASE("BigUnsigned addition") {
 
         CHECK(!c.isZero());
         CHECK_EQ(c.limb.size(), 4);
-        CHECK_EQ(c.toHex(), res);
+        CHECK_EQ(c.toBase16(), res);
     }
 }
 
@@ -267,8 +267,8 @@ TEST_CASE("BigUnsigned substraction") {
         s2.append("00000000");
         s2.append("00000000");
 
-        BigUnsigned a = BigUnsigned::fromHex(s1);
-        BigUnsigned b = BigUnsigned::fromHex(s2);
+        BigUnsigned a = BigUnsigned::fromBase16(s1);
+        BigUnsigned b = BigUnsigned::fromBase16(s2);
 
         CHECK_THROWS_WITH_MESSAGE(a -= b, "BigUnsigned::substract: result is negative", "std::runtime_error");
     }
@@ -295,8 +295,8 @@ TEST_CASE("BigUnsigned substraction") {
         s2.append("00000000");
         s2.append("00000001");
 
-        BigUnsigned a = BigUnsigned::fromHex(s1);
-        BigUnsigned b = BigUnsigned::fromHex(s2);
+        BigUnsigned a = BigUnsigned::fromBase16(s1);
+        BigUnsigned b = BigUnsigned::fromBase16(s2);
 
         a -= b;
 
@@ -311,7 +311,7 @@ TEST_CASE("BigUnsigned substraction") {
 
         CHECK(!a.isZero());
         CHECK_EQ(a.limb.size(), 4);
-        CHECK_EQ(a.toHex(), res);
+        CHECK_EQ(a.toBase16(), res);
     }
 
     {
@@ -328,8 +328,8 @@ TEST_CASE("BigUnsigned substraction") {
         s2.append("EFEFEFEF");
         s2.append("EFEFEFEF");
 
-        BigUnsigned a = BigUnsigned::fromHex(s1);
-        BigUnsigned b = BigUnsigned::fromHex(s2);
+        BigUnsigned a = BigUnsigned::fromBase16(s1);
+        BigUnsigned b = BigUnsigned::fromBase16(s2);
 
         a -= b;
 
@@ -340,7 +340,7 @@ TEST_CASE("BigUnsigned substraction") {
 
         CHECK(!a.isZero());
         CHECK_EQ(a.limb.size(), 2);
-        CHECK_EQ(a.toHex(), res);
+        CHECK_EQ(a.toBase16(), res);
     }
 
     {
@@ -353,13 +353,13 @@ TEST_CASE("BigUnsigned substraction") {
         s1.append("FFFFFFFF");
         s1.append("FFFFFFFF");
 
-        BigUnsigned a = BigUnsigned::fromHex(s1);
-        BigUnsigned b = BigUnsigned::fromHex(s1);
+        BigUnsigned a = BigUnsigned::fromBase16(s1);
+        BigUnsigned b = BigUnsigned::fromBase16(s1);
 
         a -= b;
 
         CHECK(a.isZero());
-        CHECK_EQ(a.toHex(), "0");
+        CHECK_EQ(a.toBase16(), "0");
     }
 }
 
@@ -385,8 +385,8 @@ TEST_CASE("BigUnsigned multiplication") {
         s.append("0000003F");
         s.append("0000003F");
 
-        BigUnsigned a = BigUnsigned::fromHex(s);
-        BigUnsigned b = BigUnsigned::fromHex(s);
+        BigUnsigned a = BigUnsigned::fromBase16(s);
+        BigUnsigned b = BigUnsigned::fromBase16(s);
         a *= b;
 
         std::string res = "";
@@ -399,7 +399,7 @@ TEST_CASE("BigUnsigned multiplication") {
         CHECK(!a.isZero());
         CHECK(!b.isZero());
         CHECK_EQ(a.limb.size(), 3);
-        CHECK_EQ(a.toHex(), res);
+        CHECK_EQ(a.toBase16(), res);
     }
 
     {
@@ -413,8 +413,8 @@ TEST_CASE("BigUnsigned multiplication") {
         s.append("F0000000");
         s.append("00000000");
 
-        BigUnsigned a = BigUnsigned::fromHex(s);
-        BigUnsigned b = BigUnsigned::fromHex(s);
+        BigUnsigned a = BigUnsigned::fromBase16(s);
+        BigUnsigned b = BigUnsigned::fromBase16(s);
 
         a *= b;
 
@@ -426,7 +426,7 @@ TEST_CASE("BigUnsigned multiplication") {
 
         CHECK(!a.isZero());
         CHECK_EQ(a.limb.size(), 2);
-        CHECK_EQ(a.toHex(), res);
+        CHECK_EQ(a.toBase16(), res);
     }
 }
 
@@ -475,8 +475,8 @@ TEST_CASE("BigUnsigned division and modulo") {
         s2.append("00104010");
         s2.append("00104010");
 
-        BigUnsigned a = BigUnsigned::fromHex(s);
-        BigUnsigned b = BigUnsigned::fromHex(s2);
+        BigUnsigned a = BigUnsigned::fromBase16(s);
+        BigUnsigned b = BigUnsigned::fromBase16(s2);
 
         CHECK_EQ(b.limb.size(), 2);
 
@@ -487,12 +487,12 @@ TEST_CASE("BigUnsigned division and modulo") {
         res.append("00003F03");
         res.append("B2337FCD");
 
-        CHECK_EQ(c.toHex(), res);
+        CHECK_EQ(c.toBase16(), res);
 
         BigUnsigned d = a % b;
         BigUnsigned e = (b * c) + d;
 
-        CHECK_EQ(e.toHex(), s);
+        CHECK_EQ(e.toBase16(), s);
     }
 
     {
@@ -511,8 +511,8 @@ TEST_CASE("BigUnsigned division and modulo") {
         s2.append("30303032");
         s2.append("00000001");
 
-        BigUnsigned a = BigUnsigned::fromHex(s);
-        BigUnsigned b = BigUnsigned::fromHex(s2);
+        BigUnsigned a = BigUnsigned::fromBase16(s);
+        BigUnsigned b = BigUnsigned::fromBase16(s2);
 
         CHECK_EQ(b.limb.size(), 2);
 
@@ -522,12 +522,12 @@ TEST_CASE("BigUnsigned division and modulo") {
         res.append("FA521154");
         res.append("9210C077");
 
-        CHECK_EQ(c.toHex(), res);
+        CHECK_EQ(c.toBase16(), res);
 
         BigUnsigned d = a % b;
         BigUnsigned e = (b * c) + d;
 
-        CHECK_EQ(e.toHex(), s);
+        CHECK_EQ(e.toBase16(), s);
     }
 
     {
@@ -537,8 +537,8 @@ TEST_CASE("BigUnsigned division and modulo") {
         std::string s1 = "1000000000000000000";
         std::string s2 = "100000000";
 
-        BigUnsigned v1 = BigUnsigned::fromHex(s1);
-        BigUnsigned v2 = BigUnsigned::fromHex(s2);
+        BigUnsigned v1 = BigUnsigned::fromBase16(s1);
+        BigUnsigned v2 = BigUnsigned::fromBase16(s2);
         BigUnsigned v3 = v1 % v2;
         BigUnsigned v4 = v2 % v1;
 
@@ -548,11 +548,11 @@ TEST_CASE("BigUnsigned division and modulo") {
         s1 = "1000000000001111011";
         s2 = "100000000";
 
-        v1 = BigUnsigned::fromHex(s1);
-        v2 = BigUnsigned::fromHex(s2);
+        v1 = BigUnsigned::fromBase16(s1);
+        v2 = BigUnsigned::fromBase16(s2);
         v3 = v1 % v2;
 
-        CHECK_EQ(v3.toHex(), "1111011");
+        CHECK_EQ(v3.toBase16(), "1111011");
     }
 }
 
@@ -561,19 +561,19 @@ TEST_CASE("BigUnsigned shifting") {
         /*
          * Check that shifts to both sides work on single limb number
         */
-        BigUnsigned a = BigUnsigned::fromHex("F0F");
+        BigUnsigned a = BigUnsigned::fromBase16("F0F");
 
         a << 30;
-        CHECK_EQ(a.toHex(), "F0F");
+        CHECK_EQ(a.toBase16(), "F0F");
 
         a <<= 30;
-        CHECK_EQ(a.toHex(), "3C3C0000000");
+        CHECK_EQ(a.toBase16(), "3C3C0000000");
 
         a >>= 30;
-        CHECK_EQ(a.toHex(), "F0F");
+        CHECK_EQ(a.toBase16(), "F0F");
 
         a >>= 9;
-        CHECK_EQ(a.toHex(), "7");
+        CHECK_EQ(a.toBase16(), "7");
 
         a >>= 300;
         CHECK(a.isZero());
@@ -597,7 +597,7 @@ TEST_CASE("BigUnsigned shifting") {
         s.append("F0F00F0F");
         s.append("F0F00F0F");
 
-        BigUnsigned a = BigUnsigned::fromHex(s);
+        BigUnsigned a = BigUnsigned::fromBase16(s);
         CHECK_EQ(a.limb.size(), 5);
 
         a <<= 23;
@@ -612,7 +612,7 @@ TEST_CASE("BigUnsigned shifting") {
         res.append("87F87807");
         res.append("87F87807");
         res.append("87800000");
-        CHECK_EQ(a.toHex(), res);
+        CHECK_EQ(a.toBase16(), res);
         CHECK_EQ(a.limb.size(), 5);
 
         a <<= 1;
@@ -627,12 +627,12 @@ TEST_CASE("BigUnsigned shifting") {
         res.append("0FF0F00F");
         res.append("0FF0F00F");
         res.append("0F000000");
-        CHECK_EQ(a.toHex(), res);
+        CHECK_EQ(a.toBase16(), res);
         CHECK_EQ(a.limb.size(), 5);
 
         a >>= 24;
 
-        CHECK_EQ(a.toHex(), s);
+        CHECK_EQ(a.toBase16(), s);
         CHECK_EQ(a.limb.size(), 5);
     }
 
@@ -644,7 +644,7 @@ TEST_CASE("BigUnsigned shifting") {
         s.append("F0000000");
         s.append("F0000000");
 
-        BigUnsigned a = BigUnsigned::fromHex(s);
+        BigUnsigned a = BigUnsigned::fromBase16(s);
         CHECK_EQ(a.limb.size(), 1);
 
         a <<= 1;
@@ -655,7 +655,7 @@ TEST_CASE("BigUnsigned shifting") {
 
         CHECK(!a.isZero());
         CHECK_EQ(a.limb.size(), 2);
-        CHECK_EQ(a.toHex(), res);
+        CHECK_EQ(a.toBase16(), res);
     }
 
     {
@@ -667,7 +667,7 @@ TEST_CASE("BigUnsigned shifting") {
         s.append("00000001");
         s.append("00000001");
 
-        BigUnsigned a = BigUnsigned::fromHex(s);
+        BigUnsigned a = BigUnsigned::fromBase16(s);
         CHECK_EQ(a.limb.size(), 2);
 
         a >>= 4;
@@ -677,7 +677,7 @@ TEST_CASE("BigUnsigned shifting") {
 
         CHECK(!a.isZero());
         CHECK_EQ(a.limb.size(), 1);
-        CHECK_EQ(a.toHex(), res);
+        CHECK_EQ(a.toBase16(), res);
     }
 
     {
@@ -697,8 +697,8 @@ TEST_CASE("BigUnsigned shifting") {
         s2.append("00010001");
         s2.append("00010001");
 
-        BigUnsigned a = BigUnsigned::fromHex(s1);
-        BigUnsigned b = BigUnsigned::fromHex(s2);
+        BigUnsigned a = BigUnsigned::fromBase16(s1);
+        BigUnsigned b = BigUnsigned::fromBase16(s2);
 
         CHECK_EQ(a.getNBits(), 160);
         CHECK_EQ(b.getNBits(), 113);
@@ -708,7 +708,7 @@ TEST_CASE("BigUnsigned shifting") {
 TEST_CASE("BigUnsigned opeartions with uint64_t") {
     {
         std::string s = "789789789789789789";
-        BigUnsigned a = BigUnsigned::fromHex(s);
+        BigUnsigned a = BigUnsigned::fromBase16(s);
 
         const uint64_t val = 37;
         a += val;
@@ -716,12 +716,45 @@ TEST_CASE("BigUnsigned opeartions with uint64_t") {
         a *= val;
         a /= val;
 
-        CHECK_EQ(a.toHex(), s);
+        CHECK_EQ(a.toBase16(), s);
 
         BigUnsigned b(100);
         CHECK(b == 100);
         CHECK(!(b != 100));
         CHECK(b > 99);
         CHECK(b < 101);
+    }
+}
+
+TEST_CASE("BigUnsigned base10 and base64") {
+    {
+        /*
+         * Check base10 conversion
+        */
+        std::string s = "89743891235892713957821789573821759823153253297357128571908590379531";
+        BigUnsigned v = BigUnsigned::fromBase10(s);
+
+        CHECK_EQ(v.toBase10(), s);
+
+        s = "123";
+        v = BigUnsigned::fromBase10(s);
+
+        CHECK_EQ(v.toBase16(), "7B");
+    }
+
+    {
+        /*
+         * Check base64 conversion
+        */
+        std::string s = "fjkadhsbjkfghaklwhkgjhdkashgkjdshagjkhwekjhga83e238725y3827y317894tjkdsahfk";
+        BigUnsigned v = BigUnsigned::fromBase64(s);
+
+        CHECK_EQ(v.toBase64(), s);
+
+        s = "aB";
+        v = BigUnsigned::fromBase64(s);
+
+        CHECK_EQ(v.toBase10(), "1665");
+        CHECK_EQ(v.toBase16(), "681");
     }
 }

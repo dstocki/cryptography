@@ -442,7 +442,7 @@ struct BigUnsigned {
     friend BigUnsigned operator/(BigUnsigned a, const BigUnsigned& b) { a /= b; return a; }
     friend BigUnsigned operator/(BigUnsigned a, const uint64_t b) { a /= b; return a; }
     friend BigUnsigned operator%(BigUnsigned a, const BigUnsigned& b) { a %= b; return a; }
-    friend BigUnsigned operator%(BigUnsigned a, const uint64_t b) { a %= b; return a; }
+    friend uint64_t operator%(BigUnsigned a, const uint64_t b) { return a.divmod_small(b); }
     friend BigUnsigned operator<<(BigUnsigned x, const size_t bits) { x <<= bits; return x; }
     friend BigUnsigned operator>>(BigUnsigned x, const size_t bits) { x >>= bits; return x; }
 
@@ -483,7 +483,7 @@ struct BigUnsigned {
         | => limb[2] = (0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 1111 0111)_2 |
         +--------------------------------------------------------------------------------------------------+
     */
-    static BigUnsigned fromHex(const std::string& s) {
+    static BigUnsigned fromBase16(const std::string& s) {
         BigUnsigned res;
         res.limb.clear();
 
@@ -505,7 +505,7 @@ struct BigUnsigned {
                 const char c = s.at(--idx);
                 const int conv = ahxtoi(c);
 
-                if (conv < 0) throw std::runtime_error("BigUnsigned::fromHex invalid character.");
+                if (conv < 0) throw std::runtime_error("BigUnsigned::fromBase16 invalid character.");
 
                 candidate |= (static_cast<uint64_t>(conv) << (nhexes * 4));
                 ++nhexes;
@@ -517,7 +517,7 @@ struct BigUnsigned {
         return res;
     }
 
-    std::string toHex(void) const {
+    std::string toBase16(void) const {
         if (limb.empty()) return "0";
 
         const char alphabet[] = "0123456789ABCDEF";
@@ -547,5 +547,89 @@ struct BigUnsigned {
         }
 
         return oss.str();
+    }
+
+    static BigUnsigned fromBase10(const std::string& s) {
+        BigUnsigned res(0);
+        if (s.empty()) return res;
+
+        const size_t lenOfLiteral = s.size();
+        for (size_t i = 0; i < lenOfLiteral; ++i) {
+            const char c = s.at(i);
+            if (c < '0' || c > '9') throw std::runtime_error("BigUnsigned::fromBase10 invalid character");
+
+            const uint64_t digit = c - '0';
+            res = res * 10 + digit;
+        }
+
+        return res;
+    }
+
+    std::string toBase10(void) const {
+        if (isZero()) return "0";
+
+        BigUnsigned val(*this);
+        std::string res = "";
+        res.reserve(limb.size() * 20);
+
+        while (!val.isZero()) {
+            const uint8_t digit = val % 10;
+            const char c = '0' + digit;
+            res.push_back(c);
+            val = val / 10;
+        }
+        
+        std::reverse(res.begin(), res.end());
+        return res;
+    }
+
+    static BigUnsigned fromBase64(const std::string s) {
+        BigUnsigned res(0);
+        if (s.empty()) return res;
+
+        auto atob64 = [](const char c) -> int {
+            if (c >= 'A' && c <= 'Z') return c - 'A';
+            if (c >= 'a' && c <= 'z') return 26 + (c - 'a');
+            if (c >= '0' && c <= '9') return 52 + (c - '0');
+            if (c == '+') return 62;
+            if (c == '/') return 63;
+            return -1;
+        };
+
+        for (const char c : s) {
+            const int digit = atob64(c);
+            if (digit < 0) throw std::runtime_error("BigUnsigned::fromBase64 invalid character.");
+
+            res *= 64;
+            res += static_cast<uint64_t>(digit);
+        }
+
+        res.normalize();
+        return res;
+    }
+
+    std::string toBase64(void) const {
+        if (isZero()) return "A";
+
+        constexpr char alphabet[] =
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+            "abcdefghijklmnopqrstuvwxyz"
+            "0123456789+/";
+
+        BigUnsigned val(*this);
+
+        std::string res = "";
+        res.reserve(val.limb.size() * 5);
+
+        while (!val.isZero()) {
+            const uint64_t idx = val % 64;
+            val /= 64;
+
+            const char sym = alphabet[idx];
+            res.push_back(sym);
+        }
+     
+        std::reverse(res.begin(), res.end());
+        return res;
     }
 };
