@@ -10,7 +10,10 @@
 #include <string>
 #include <sstream>
 #include <iomanip>
+#include <algorithm>
 #include <inttypes.h>
+
+#pragma once
 
 /*
     +-----------------------------------------------------------------------------------+
@@ -61,6 +64,11 @@ struct BigUnsigned {
         } else {
             return false;
         }
+    }
+
+    bool isOdd(void) const {
+        if (limb.empty()) return false;
+        return (limb[0] & 1) == 1;
     }
 
     /* Brief: Removes all MSLs such that MSL == 0 */
