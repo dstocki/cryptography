@@ -229,4 +229,7 @@ public:
     friend bool operator!=(const F2mElement& lhs, const F2mElement& rhs) {
         return !(lhs == rhs);
     }
+
+    BigUnsigned getValRaw(void) const { return val; }
+    BigUnsigned getModPolyRaw(void) const { return modPoly; }
 };

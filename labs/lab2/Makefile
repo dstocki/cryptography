@@ -12,7 +12,7 @@ DIR_DOCTEST = $(DIR_EXTERNAL)/doctest
 DIR_BUILD = build
 
 SOURCE_TESTS = $(wildcard $(DIR_TESTS)/*.cpp)
-BIN_TESTS = $(DIR_BUILD)/butest
+BIN_TESTS = $(DIR_BUILD)/test
 
 all: test
 
@@ -21,6 +21,14 @@ $(DIR_BUILD):
 
 clean:
 	rm -rf $(DIR_BUILD)
+
+ser:
+	$(CC) $(CFLAGS_RELEASE) $(DIR_SRC)/serialize.cpp -I$(DIR_INCLUDE) -I$(DIR_DOCTEST) -o $(DIR_BUILD)/serialize
+
+deser:
+	$(CC) $(CFLAGS_RELEASE) $(DIR_SRC)/deserialize.cpp -I$(DIR_INCLUDE) -I$(DIR_DOCTEST) -o $(DIR_BUILD)/deserialize
+
+man: $(DIR_BUILD) ser deser
 
 test: $(BIN_TESTS)
 	./$(BIN_TESTS)

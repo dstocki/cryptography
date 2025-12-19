@@ -1,0 +1,13 @@
+echo "BIG 10 12345678901234567890" \
+  | ./serialize \
+  | ./deserialize
+
+# FP over p = 7919
+echo "FP 10 1234 7919" \
+  | ./serialize \
+  | ./deserialize
+
+# F2M over F_{2^4} with x^4 + x + 1
+echo "F2M 1011 10011" \
+  | ./serialize \
+  | ./deserialize
