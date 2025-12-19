@@ -123,6 +123,8 @@ public:
     FpElement(const std::string& s, const BigUnsigned v)
         : FpElement(BaseE::BASE_16, s, v.toBase16()) {}
 
+    FpElement() : val(0), modulus(0) {}
+
     bool inSameFieldAs(const FpElement& other) const {
         return modulus == other.modulus;
     }
