@@ -34,6 +34,6 @@ test: $(BIN_TESTS)
 	./$(BIN_TESTS)
 
 $(BIN_TESTS): $(DIR_BUILD) $(SOURCE_TESTS)
-	$(CC) $(CFLAGS_TEST) $(SOURCE_TESTS) -I$(DIR_INCLUDE) -I$(DIR_DOCTEST) -o $@
+	$(CC) $(CFLAGS_TEST) $(SOURCE_TESTS) -I$(DIR_INCLUDE) -I$(DIR_DOCTEST) -o $@ -lssl -lcrypto
 
 .PHONY: all test clean
